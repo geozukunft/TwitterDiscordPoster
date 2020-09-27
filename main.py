@@ -29,7 +29,7 @@ async def main():
     tweets = api.user_timeline(screen_name=twitter_user,
                                # 200 is the maximum allowed count
                                count=5,
-                               include_rts=False,
+                               include_rts=True,
                                # Necessary to keep full_text
                                # otherwise only the first 140 words are extracted
                                tweet_mode='extended'
@@ -42,12 +42,21 @@ async def main():
     tweets_to_send.reverse()
 
     for info in tweets_to_send:
-        if info.retweeted is False:
             row = await conn.fetchrow('SELECT * FROM tweets WHERE tweetid = $1', info.id)
             if row is None:
                 await conn.execute('INSERT INTO tweets VALUES ($1)', info.id)
-                data = "https://twitter.com/StTEsport/status/" + info.id_str
-                push_data = {'content': data}
+                if info.retweeted_status:
+                    tweettype = "retweeted"
+                else:
+                    tweettype = "tweeted"
+
+                data = "@" + info.author.screen_name + " " + tweettype + " this at " + str(info.created_at) + \
+                       ": https://twitter.com/" + info.author.screen_name + "/status/" + info.id_str
+                push_data = {
+                    'content': data,
+                    'username': info.author.name,
+                    'avatar_url': info.author.profile_image_url,
+                }
 
                 response = requests.post(
                     webhook_url, data=json.dumps(push_data),
@@ -59,7 +68,7 @@ async def main():
                         % (response.status_code, response.text)
                     )
 
-    print(f'done with {tweets_to_send}')
+    #print(f'done with {tweets_to_send}')
     await asyncio.sleep(20)
 
 
