@@ -46,7 +46,7 @@ async def main():
             row = await conn.fetchrow('SELECT * FROM tweets WHERE tweetid = $1', info.id)
             if row is None:
                 await conn.execute('INSERT INTO tweets VALUES ($1)', info.id)
-                data = info.full_text + "\n" + "https://www.twitter.com/StTEsport/status/" + info.id_str
+                data = "https://twitter.com/StTEsport/status/" + info.id_str
                 push_data = {'content': data}
 
                 response = requests.post(
